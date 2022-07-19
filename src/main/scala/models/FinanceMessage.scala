@@ -10,6 +10,18 @@ case class MonthlyPayment(monthly: BigDecimal) extends FinanceMessage
 case class TalkFinance(reply: String) extends FinanceMessage
 
 
+case class TruliaListing(price: String,
+                         beds: String,
+                         baths: String,
+                         sqFt: String,
+                         street: String,
+                         city: String,
+                         zipCode: String
+                        ) extends FinanceMessage
+
+
+
+
 
 
 

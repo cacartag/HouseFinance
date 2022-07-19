@@ -50,13 +50,22 @@ object Starter extends App {
   val scrapper = browser.parseString(truliaInput)
 
   // pull data for individual homes in overview
-  // val l = scrapper >?>  elementList("div[data-testid=\"property-card-details\"]")
+  val l = scrapper >?>  elementList("div[data-testid=\"property-card-details\"]")
 
-  //
-  val l = (scrapper >?> element("nav[data-testid=\"search-results-pagination\"]") >> elementList("li") >> attr("href")("a")).get.toSet
+  val price = l.get.head >?> text("div[data-testid=\"property-price\"]")
+  val beds = l.get.head >?> text("div[data-testid=\"property-beds\"]")
+  val baths = l.get.head >?> text("div[data-testid=\"property-baths\"]")
+  val sqFt = l.get.head >?> text("div[data-testid=\"property-floorSpace\"]")
+  val addressCompact = l.get.head >?> attr("title")("div[data-testid=\"property-address\"]")
+
+  // pull data for pagination to go to all
+  // val pagination = (scrapper >?> element("nav[data-testid=\"search-results-pagination\"]") >> elementList("li") >> attr("href")("a")).get.toSet
+
+
 
 //  println(driver.getPageSource)
-  println(l)
+  println(l.get.head)
+  println(price, beds, baths, sqFt, addressCompact)
 //  println(if (l.isDefined) l.get.foreach(println) else "Nothing")
 
 //  implicit val system: ActorSystem[FinanceMessage] = ActorSystem(Guardian.apply, "FinanceSystem")
