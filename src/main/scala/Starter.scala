@@ -8,30 +8,34 @@ import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.http.scaladsl.server.Directives._
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.util.Timeout
-import models.{DownPayment, FinanceMessage, TalkFinance}
-
+import models.{DownPayment, FinanceMessage, TalkFinance, TruliaListing}
 import scala.concurrent.{Await, ExecutionContextExecutor}
 import scala.concurrent.duration.DurationInt
 import io.github.bonigarcia.wdm.WebDriverManager
 import org.openqa.selenium.chrome.{ChromeDriver, ChromeOptions}
+
 import net.ruippeixotog.scalascraper.browser.JsoupBrowser
 import net.ruippeixotog.scalascraper.dsl.DSL._
 import net.ruippeixotog.scalascraper.dsl.DSL.Extract._
 import net.ruippeixotog.scalascraper.dsl.DSL.Parse._
 import net.ruippeixotog.scalascraper.model._
 
+import scala.util.Try
+
 //import scala.io.{Source, StdIn}
 
-
-
 object Starter extends App {
+
+  implicit val system: ActorSystem[FinanceMessage] = ActorSystem(Guardian.apply, "FinanceSystem")
+  implicit val executionContext: ExecutionContextExecutor = system.executionContext
+  implicit val timer: Timeout = Timeout(5.seconds)
+  implicit val scheduler: Scheduler = system.scheduler
 
   println("Hello World!!!")
 
   val j = Source(Set(1,2,3))
 
 //  WebDriverManager.chromedriver().setup()
-//
 //
 //  val options = new ChromeOptions()
 //  options.addArguments("--headless")
@@ -50,28 +54,56 @@ object Starter extends App {
   val scrapper = browser.parseString(truliaInput)
 
   // pull data for individual homes in overview
-  val l = scrapper >?>  elementList("div[data-testid=\"property-card-details\"]")
+  val homesList: Option[List[Element]] = scrapper >?> elementList("div[data-testid=\"property-card-details\"]")
 
-  val price = l.get.head >?> text("div[data-testid=\"property-price\"]")
-  val beds = l.get.head >?> text("div[data-testid=\"property-beds\"]")
-  val baths = l.get.head >?> text("div[data-testid=\"property-baths\"]")
-  val sqFt = l.get.head >?> text("div[data-testid=\"property-floorSpace\"]")
-  val addressCompact = l.get.head >?> attr("title")("div[data-testid=\"property-address\"]")
+  val pullMoreData = Flow[Element].map{
+    el =>
+      (scrapper >?> element("nav[data-testid=\"search-results-pagination\"]") >> elementList("li") >> attr("href")("a")).get.toSet
+  }
+
+  val basicHomeExtract = Flow[Element].map {
+    element =>
+      val price = element >?> text("div[data-testid=\"property-price\"]")
+      val beds = element >?> text("div[data-testid=\"property-beds\"]")
+      val baths = element >?> text("div[data-testid=\"property-baths\"]")
+      val sqFt = element >?> text("div[data-testid=\"property-floorSpace\"]")
+      val addressCompact = element >?> attr("title")("div[data-testid=\"property-address\"]")
+
+
+      // Further parsing of address
+      if (addressCompact.isDefined) {
+        Try {
+          val splitAddress: Option[Array[String]] = Some(addressCompact.get.split(","))
+          val street = Some(splitAddress.get.head.split(" ")
+            .take(splitAddress.get.head.split(" ").length - 2).mkString(" "))
+          val city = Some(splitAddress.get.head.split(" ").takeRight(1).head)
+          val state = Some(splitAddress.get.last.split(" ").tail.head)
+          val zipCode = Some(splitAddress.get.last.split(" ").tail.last)
+
+          TruliaListing(price, beds, baths, sqFt, street, city, state,zipCode)
+        }
+      } else {
+        TruliaListing(price, beds, baths, sqFt, None, None, None, None)
+      }
+  }
+
+  Source(homesList.getOrElse(Nil))
+    .via(basicHomeExtract)
+    .runWith(Sink.foreach(println))
+
+
 
   // pull data for pagination to go to all
-  // val pagination = (scrapper >?> element("nav[data-testid=\"search-results-pagination\"]") >> elementList("li") >> attr("href")("a")).get.toSet
+
+  val pagination = (scrapper >?> element("nav[data-testid=`1\"search-results-pagination\"]") >> elementList("li") >> attr("href")("a")).get.toSet
 
 
 
 //  println(driver.getPageSource)
-  println(l.get.head)
-  println(price, beds, baths, sqFt, addressCompact)
+//  println(homesList.get.head)
 //  println(if (l.isDefined) l.get.foreach(println) else "Nothing")
 
-//  implicit val system: ActorSystem[FinanceMessage] = ActorSystem(Guardian.apply, "FinanceSystem")
-//  implicit val executionContext: ExecutionContextExecutor = system.executionContext
-//  implicit val timer: Timeout = Timeout(5.seconds)
-//  implicit val scheduler: Scheduler = system.scheduler
+
 //
 //
 //  val flowIncrement: Flow[Int, Int, NotUsed] = Flow[Int].map(in => in * 5)
