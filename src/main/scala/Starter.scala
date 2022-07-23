@@ -1,4 +1,4 @@
-import Starter.browser
+import Starter.{browser, scrapper}
 import actors.Guardian
 import akka.NotUsed
 import akka.actor.typed.{ActorSystem, Scheduler}
@@ -9,17 +9,18 @@ import akka.http.scaladsl.server.Directives._
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.util.Timeout
 import models.{DownPayment, FinanceMessage, TalkFinance, TruliaListing}
+
 import scala.concurrent.{Await, ExecutionContextExecutor}
 import scala.concurrent.duration.DurationInt
 import io.github.bonigarcia.wdm.WebDriverManager
 import org.openqa.selenium.chrome.{ChromeDriver, ChromeOptions}
-
 import net.ruippeixotog.scalascraper.browser.JsoupBrowser
 import net.ruippeixotog.scalascraper.dsl.DSL._
 import net.ruippeixotog.scalascraper.dsl.DSL.Extract._
 import net.ruippeixotog.scalascraper.dsl.DSL.Parse._
 import net.ruippeixotog.scalascraper.model._
 
+import scala.annotation.tailrec
 import scala.util.Try
 
 //import scala.io.{Source, StdIn}
@@ -35,33 +36,35 @@ object Starter extends App {
 
   val j = Source(Set(1,2,3))
 
-//  WebDriverManager.chromedriver().setup()
-//
-//  val options = new ChromeOptions()
-//  options.addArguments("--headless")
-//
-//  val driver = new ChromeDriver()
+  WebDriverManager.chromedriver().setup()
 
-  val truliaInput = scala.io.Source.fromResource("samplehtml/TruliaSite.txt").mkString
+  val options = new ChromeOptions()
+  options.addArguments("--headless")
+
+  val driver = new ChromeDriver()
+
+//  val truliaInput = scala.io.Source.fromResource("samplehtml/TruliaSite.txt").mkString
 
 //  driver.get("https://www.realtor.com/realestateandhomes-search/New-York_NY")
-//  driver.get("https://www.trulia.com/AR/Springdale/")
+  val baseUrl = "https://www.trulia.com"
+  driver.get(s"$baseUrl/AR/Springdale/")
 //  driver.get("https://yahoo.com")
 
 //  val page: String = driver.getPageSource
 
   val browser = JsoupBrowser()
-  val scrapper = browser.parseString(truliaInput)
+  val scrapper = browser.parseString(driver.getPageSource)
 
-  // pull data for individual homes in overview
+  // pull data for individual homes in the page
   val homesList: Option[List[Element]] = scrapper >?> elementList("div[data-testid=\"property-card-details\"]")
 
-  val pullMoreData = Flow[Element].map{
+  val pullMoreData = Flow[Element].map {
     el =>
       (scrapper >?> element("nav[data-testid=\"search-results-pagination\"]") >> elementList("li") >> attr("href")("a")).get.toSet
   }
 
-  val basicHomeExtract = Flow[Element].map {
+  // This will pull out data for a single page of results
+  val basicHomeExtract: Flow[Element, Product, NotUsed] = Flow[Element].map {
     element =>
       val price = element >?> text("div[data-testid=\"property-price\"]")
       val beds = element >?> text("div[data-testid=\"property-beds\"]")
@@ -87,16 +90,54 @@ object Starter extends App {
       }
   }
 
-  Source(homesList.getOrElse(Nil))
+//  Source(homesList.getOrElse(Nil))
+//    .via(basicHomeExtract)
+//    .runWith(Sink.foreach(println))
+
+
+
+//  pull data for pagination to go to all
+
+  val getPage: Flow[String, Element, NotUsed] = Flow[String].mapConcat{
+    site =>
+      WebDriverManager.chromedriver().setup()
+      val driver2 = new ChromeDriver()
+
+      println("made it into stream")
+      driver2.get(baseUrl+site)
+      val browser = JsoupBrowser()
+      val scrapper = browser.parseString(driver2.getPageSource)
+
+      driver2.close()
+
+      val resultSet = scrapper >?> elementList("div[data-testid=\"property-card-details\"]")
+
+      if(resultSet.isDefined)
+        resultSet.get
+      else
+        None
+  }
+  
+  val pagination = (scrapper >?> element("nav[data-testid=\"search-results-pagination\"]") >?> elementList("li") >?> attr("href")("a")).flatten.head.filter(_.isDefined).map(_.get).max
+  val lastPageIndex = pagination.split("/").last.split("_").head
+
+  driver.close()
+
+  @tailrec
+  def createTruliaURL(current: Int, urlList: List[String] = Nil): List[String] = {
+    if (current == 0)
+      urlList
+    else
+      createTruliaURL(current - 1, urlList :+ s"/AR/Springdale/${current}_p/")
+  }
+
+  Source(createTruliaURL(lastPageIndex.toInt))
+    .via(getPage)
     .via(basicHomeExtract)
     .runWith(Sink.foreach(println))
 
-
-
-  // pull data for pagination to go to all
-
-  val pagination = (scrapper >?> element("nav[data-testid=`1\"search-results-pagination\"]") >> elementList("li") >> attr("href")("a")).get.toSet
-
+//  println(driver.getPageSource)
+//  pagination.foreach(println)
 
 
 //  println(driver.getPageSource)

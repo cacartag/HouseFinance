@@ -4,7 +4,11 @@
 - Trulia site extractor of initial page
 
 ## Working On
-- Trulia page navigator to travel to each page available 
-
-
+- Trulia page navigator to travel to each page available
+- My flow will do the following:
+  - [X] Retrieve page 
+  - [X] Parse pagination
+  - [ ] Use pagination to traverse to each individual result
+  - [ ] Traverse each result and parse 
+  - [ ] Store data in file 
 
