@@ -8,7 +8,7 @@
 - My flow will do the following:
   - [X] Retrieve page 
   - [X] Parse pagination
-  - [ ] Use pagination to traverse to each individual result
-  - [ ] Traverse each result and parse 
+  - [X] Use pagination to traverse to each individual result
+  - [X] Traverse each result and parse 
   - [ ] Store data in file 
 
