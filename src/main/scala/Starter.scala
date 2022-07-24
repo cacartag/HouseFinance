@@ -8,6 +8,7 @@ import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.http.scaladsl.server.Directives._
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.util.Timeout
+import flows.TruliaFlows.{basicHomeExtract, createTruliaURL, getPage}
 import models.{DownPayment, FinanceMessage, TalkFinance, TruliaListing}
 
 import scala.concurrent.{Await, ExecutionContextExecutor}
@@ -20,6 +21,7 @@ import net.ruippeixotog.scalascraper.dsl.DSL.Extract._
 import net.ruippeixotog.scalascraper.dsl.DSL.Parse._
 import net.ruippeixotog.scalascraper.model._
 
+import java.io.{File, PrintWriter}
 import scala.annotation.tailrec
 import scala.util.Try
 
@@ -56,25 +58,35 @@ object Starter extends App {
   // pull data for individual homes in the page
   val homesList: Option[List[Element]] = scrapper >?> elementList("div[data-testid=\"property-card-details\"]")
 
-
-  // This will pull out data for a single page of results
+//  This will pull out data for a single page of results
 //  Source(homesList.getOrElse(Nil))
 //    .via(basicHomeExtract)
 //    .runWith(Sink.foreach(println))
 
 
-//  pull data for pagination to go to all
+//  pull index of last page of result for
   val pagination = (scrapper >?> element("nav[data-testid=\"search-results-pagination\"]") >?> elementList("li") >?> attr("href")("a")).flatten.head.filter(_.isDefined).map(_.get).max
   val lastPageIndex = pagination.split("/").last.split("_").head
 
+
+//  val truliaGraph = Source(homesList.get)
+//    .via(basicHomeExtract)
+//
+//
+//  val g = TruliaListing(Some("$680"), Some("4bd"),Some("4ba"),Some("3,276 sqft (on 0.50 acres"),Some("255 Edinburgh"),Some("Springdale"),Some("AR"),Some("72762"),Some("/p/ar/springdale/1255-edinburgh-loop-springdale-ar-72762--2064726008"))
+//
+//  val writeDirectory = "D:\\TruliaHomesData\\"
+//  val fileName = ""
+//  val pw = new PrintWriter(new File(s"$writeDirectory$fileName"))
+
+//    .runWith(Sink.foreach(println))
+
   driver.close()
 
-
-
-//  Source(createTruliaURL(lastPageIndex.toInt))
-//    .via(getPage)
-//    .via(basicHomeExtract)
-//    .runWith(Sink.foreach(println))
+  Source(createTruliaURL(lastPageIndex.toInt))
+    .via(getPage(baseUrl))
+    .via(basicHomeExtract)
+    .runWith(Sink.foreach(println))
 
 
 //  println(driver.getPageSource)

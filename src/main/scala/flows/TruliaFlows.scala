@@ -22,38 +22,11 @@ object TruliaFlows {
       createTruliaURL(current - 1, urlList :+ s"/AR/Springdale/${current}_p/")
   }
 
-  def basicHomeExtract: Flow[Element, Product, NotUsed] = Flow[Element].map {
-    element =>
-      val price = element >?> text("div[data-testid=\"property-price\"]")
-      val beds = element >?> text("div[data-testid=\"property-beds\"]")
-      val baths = element >?> text("div[data-testid=\"property-baths\"]")
-      val sqFt = element >?> text("div[data-testid=\"property-floorSpace\"]")
-      val addressCompact = element >?> attr("title")("div[data-testid=\"property-address\"]")
-
-
-      // Further parsing of address
-      if (addressCompact.isDefined) {
-        Try {
-          val splitAddress: Option[Array[String]] = Some(addressCompact.get.split(","))
-          val street = Some(splitAddress.get.head.split(" ")
-            .take(splitAddress.get.head.split(" ").length - 2).mkString(" "))
-          val city = Some(splitAddress.get.head.split(" ").takeRight(1).head)
-          val state = Some(splitAddress.get.last.split(" ").tail.head)
-          val zipCode = Some(splitAddress.get.last.split(" ").tail.last)
-
-          TruliaListing(price, beds, baths, sqFt, street, city, state,zipCode)
-        }
-      } else {
-        TruliaListing(price, beds, baths, sqFt, None, None, None, None)
-      }
-  }
-
   def getPage(baseUrl: String): Flow[String, Element, NotUsed] = Flow[String].mapConcat{
     site =>
       WebDriverManager.chromedriver().setup()
       val driver2 = new ChromeDriver()
 
-      println("made it into stream")
       driver2.get(baseUrl+site)
       val browser = JsoupBrowser()
       val scrapper = browser.parseString(driver2.getPageSource)
@@ -67,5 +40,33 @@ object TruliaFlows {
       else
         None
   }
+
+  def basicHomeExtract: Flow[Element, TruliaListing, NotUsed] = Flow[Element].map {
+    el =>
+      val price = el >?> text("div[data-testid=\"property-price\"]")
+      val beds = el >?> text("div[data-testid=\"property-beds\"]")
+      val baths = el >?> text("div[data-testid=\"property-baths\"]")
+      val sqFt = el >?> text("div[data-testid=\"property-floorSpace\"]")
+      val addressCompact = el >?> attr("title")("div[data-testid=\"property-address\"]")
+      val link = el >?> attr("href")("a[data-testid=\"property-card-link\"]")
+
+
+      // Further parsing of address
+      if (addressCompact.isDefined) {
+        val splitAddress: Option[Array[String]] = Some(addressCompact.get.split(","))
+        val street = Some(splitAddress.get.head.split(" ")
+          .take(splitAddress.get.head.split(" ").length - 2).mkString(" "))
+        val city = Some(splitAddress.get.head.split(" ").takeRight(1).head)
+        val state = Some(splitAddress.get.last.split(" ").tail.head)
+        val zipCode = Some(splitAddress.get.last.split(" ").tail.last)
+
+        TruliaListing(price, beds, baths, sqFt, street, city, state,zipCode, link)
+      } else {
+        TruliaListing(price, beds, baths, sqFt, None, None, None, None, link)
+      }
+  }
+
+
+//  def furtherHomeDetail = Flow[TruliaListing]
 
 }

@@ -17,7 +17,8 @@ case class TruliaListing(price: Option[String],
                          street: Option[String],
                          city: Option[String],
                          state: Option[String],
-                         zipCode: Option[String]
+                         zipCode: Option[String],
+                         link: Option[String]
                         ) extends FinanceMessage
 
 

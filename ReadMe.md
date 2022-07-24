@@ -11,4 +11,5 @@
   - [X] Use pagination to traverse to each individual result
   - [X] Traverse each result and parse 
   - [ ] Store data in file 
+  - [ ] Add timer to have data be scraped once every 6 hours 
 
