@@ -6,6 +6,7 @@ import akka.actor.typed.scaladsl.AskPattern.Askable
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.http.scaladsl.server.Directives._
+import akka.serialization.SerializationExtension
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.util.Timeout
 import flows.TruliaFlows.{basicHomeExtract, createTruliaURL, getPage}
@@ -21,7 +22,9 @@ import net.ruippeixotog.scalascraper.dsl.DSL.Extract._
 import net.ruippeixotog.scalascraper.dsl.DSL.Parse._
 import net.ruippeixotog.scalascraper.model._
 
-import java.io.{File, PrintWriter}
+import java.io.{BufferedWriter, File, FileWriter}
+import java.text.SimpleDateFormat
+import java.util.{Calendar, Date}
 import scala.annotation.tailrec
 import scala.util.Try
 
@@ -33,21 +36,20 @@ object Starter extends App {
   implicit val executionContext: ExecutionContextExecutor = system.executionContext
   implicit val timer: Timeout = Timeout(5.seconds)
   implicit val scheduler: Scheduler = system.scheduler
-
   val j = Source(Set(1,2,3))
 
   WebDriverManager.chromedriver().setup()
 
-  val options = new ChromeOptions()
-  options.addArguments("--headless")
+//  val options = new ChromeOptions()
+//  options.addArguments("--headless")
 
-  val driver = new ChromeDriver()
+//  val driver = new ChromeDriver()
 
   val truliaInput = scala.io.Source.fromResource("samplehtml/TruliaSite.txt").mkString
 
 //  driver.get("https://www.realtor.com/realestateandhomes-search/New-York_NY")
-  val baseUrl = "https://www.trulia.com"
-  driver.get(s"$baseUrl/AR/Springdale/")
+//  val baseUrl = "https://www.trulia.com"
+//  driver.get(s"$baseUrl/AR/Springdale/")
 //  driver.get("https://yahoo.com")
 
 //  val page: String = driver.getPageSource
@@ -73,68 +75,38 @@ object Starter extends App {
 //    .via(basicHomeExtract)
 //
 //
-//  val g = TruliaListing(Some("$680"), Some("4bd"),Some("4ba"),Some("3,276 sqft (on 0.50 acres"),Some("255 Edinburgh"),Some("Springdale"),Some("AR"),Some("72762"),Some("/p/ar/springdale/1255-edinburgh-loop-springdale-ar-72762--2064726008"))
-//
-//  val writeDirectory = "D:\\TruliaHomesData\\"
-//  val fileName = ""
-//  val pw = new PrintWriter(new File(s"$writeDirectory$fileName"))
+
+  import akka.http.scaladsl.server.Directives
+  import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
+  import spray.json._
+
+
+  val datePattern = "MM_dd_yyyy_KK_mm_aa"
+  val simpleFormat = new SimpleDateFormat(datePattern)
+  val date: String = simpleFormat.format(new Date())
+
+  val g = TruliaListing(Some("$680"), Some("4bd"),Some("4ba"),Some("3,276 sqft (on 0.50 acres"),Some("255 Edinburgh"),Some("Springdale"),Some("AR"),Some("72762"),Some("/p/ar/springdale/1255-edinburgh-loop-springdale-ar-72762--2064726008"))
+
+  val serialization = SerializationExtension(system)
+
+  println(serialization.serialize(g))
+
+  val writeDirectory = "C:\\Users\\chris\\Documents\\TruliaData\\"
+  val fileName = s"TruliaData_$date.txt"
+  val pw = new BufferedWriter(new FileWriter(s"$writeDirectory$fileName"))
+  pw.write("Hello World to the file")
+  pw.close()
+
+
 
 //    .runWith(Sink.foreach(println))
 
-  driver.close()
+//  driver.close()
 
-  Source(createTruliaURL(lastPageIndex.toInt))
-    .via(getPage(baseUrl))
-    .via(basicHomeExtract)
-    .runWith(Sink.foreach(println))
-
-
-//  println(driver.getPageSource)
-//  pagination.foreach(println)
-
-
-//  println(driver.getPageSource)
-//  println(homesList.get.head)
-//  println(if (l.isDefined) l.get.foreach(println) else "Nothing")
-
-
-//
-//
-//  val flowIncrement: Flow[Int, Int, NotUsed] = Flow[Int].map(in => in * 5)
-//
-//  j.via(flowIncrement).runWith(Sink.foreach(println))
-
-
-//
-//  val route =
-//    concat(
-//      path("DownPayed.html"){
-//        get {
-//          parameters("DownAmount") { downAmount =>
-//            val accountReply: FinanceMessage = Await.result(system ? (ret => DownPayment(ret, BigDecimal(downAmount))),5.seconds)
-//
-//            complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, s"<h1>Accountant response  ${accountReply.asInstanceOf[TalkFinance].reply} </h1>"))
-//          }
-//        }
-//      },
-//      path("Home"){
-//        get {
-//          complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, Source.fromResource("html/Index.html").mkString))
-//        }
-//      }
-//    )
-//
-//
-//
-//  val bindingFuture = Http().newServerAt("localhost", 8080).bind(route)
-//
-//  println("Server online at http://localhost:8080")
-//
-//  StdIn.readLine()
-//
-//  bindingFuture
-//    .flatMap(_.unbind())
-//    .onComplete(_ => system.terminate())
+//  Source(createTruliaURL(lastPageIndex.toInt))
+//    .via(getPage(baseUrl))
+//    .via(basicHomeExtract)
+//    .runWith(Sink.foreach(println))
 
 
 }

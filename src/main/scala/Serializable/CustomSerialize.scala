@@ -1,0 +1,4 @@
+package Serializable
+
+trait CustomSerialize
+
