@@ -1,13 +1,12 @@
 package controllers
 
-import akka.http.scaladsl.Http
-import akka.http.scaladsl.server.Directives._
 import models.FinanceMessage
 
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 import scala.io.StdIn
 
+@Singleton
 class MainController {
 
 
