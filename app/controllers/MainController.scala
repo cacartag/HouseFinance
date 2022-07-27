@@ -1,14 +1,26 @@
 package controllers
 
 import models.FinanceMessage
+import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
+import play.api.mvc.{AbstractController, ControllerComponents}
+import slick.jdbc.PostgresProfile
 
+import javax.inject.Inject
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 import scala.io.StdIn
 
-@Singleton
-class MainController {
+class MainController @Inject()(protected val dbConfigProvider: DatabaseConfigProvider, cc: ControllerComponents)
+  extends AbstractController(cc)
+  with HasDatabaseConfigProvider[PostgresProfile]
+  {
 
+    def starting = Action {
+
+
+
+        Ok("Welcome to this very first page!!!!")
+    }
 
 //    val route =
 //      concat(
@@ -32,9 +44,9 @@ class MainController {
 
 //    val bindingFuture = Http().newServerAt("localhost", 8080).bind(route)
 
-    println("Server online at http://localhost:8080")
-
-    StdIn.readLine()
+//    println("Server online at http://localhost:8080")
+//
+//    StdIn.readLine()
 //
 //    bindingFuture
 //      .flatMap(_.unbind())

@@ -6,6 +6,7 @@ import akka.util.Timeout
 import io.github.bonigarcia.wdm.WebDriverManager
 import models.FinanceMessage
 import net.ruippeixotog.scalascraper.browser.JsoupBrowser
+import net.ruippeixotog.scalascraper.dsl.DSL._
 import net.ruippeixotog.scalascraper.model.Element
 import net.ruippeixotog.scalascraper.scraper.ContentExtractors.{attr, element, elementList}
 
@@ -15,7 +16,8 @@ import java.util.Date
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration.DurationInt
 
-object Starter extends App {
+object Starter {
+
 
   implicit val system: ActorSystem[FinanceMessage] = ActorSystem(Guardian.apply, "FinanceSystem")
   implicit val executionContext: ExecutionContextExecutor = system.executionContext

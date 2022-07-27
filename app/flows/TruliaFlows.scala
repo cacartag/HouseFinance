@@ -60,12 +60,12 @@ object TruliaFlows {
         val state = Some(splitAddress.get.last.split(" ").tail.head)
         val zipCode = Some(splitAddress.get.last.split(" ").tail.last)
 
-        TruliaListing(price, beds, baths, sqFt, street, city, state,zipCode, link)
+        // Need this rearranged
+        TruliaListing(price, beds, baths, sqFt, street, city, state,zipCode, link,None)
       } else {
-        TruliaListing(price, beds, baths, sqFt, None, None, None, None, link)
+        TruliaListing(price, beds, baths, sqFt, None, None, None, None, link,None)
       }
   }
-
 
 //  def furtherHomeDetail = Flow[TruliaListing]
 
